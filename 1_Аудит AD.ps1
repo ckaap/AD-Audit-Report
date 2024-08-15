@@ -1,9 +1,3 @@
-﻿<#
-Скрипт предназначен для сбора и экспорта данных об объектах Active Directory, включая количество компьютеров, рабочих станций, серверов, пользователей и групп, а также активных объектов. 
-Он создает отчет с подробной информацией, записывая результаты в текстовый файл.
-Скрипт автоматически определяет путь сохранения данных и предоставляет удобочитаемые результаты, что облегчает анализ состояния инфраструктуры. 
-#>
-
 $Computers = (Get-ADComputer -Filter * | Measure-Object).Count
 $Workstation = (Get-ADComputer -Filter { OperatingSystem -notlike "*Server*"} | Measure-Object).Count
 $Servers = (Get-ADComputer -Filter { OperatingSystem -like "*Server*"} | Measure-Object).Count
@@ -193,19 +187,58 @@ $nullGroupCount = (Get-ADGroup -Filter * -Properties Members | where {-not $_.me
 #Get-GPO -All | Measure-Object | Select-Object -ExpandProperty Count
 
 #список пользователей Domain Admins
-$exportPathDA= "$mainPath+DomainAdmins.txt"
+$exportPathDA = $mainPath + "DomainAdmins.txt"
+# Получаем пользователей группы Domain Admins
 $DomainAdmins = Get-ADGroupMember -Identity "Domain Admins" | Get-ADUser -Properties Name,Enabled,DisplayName,PasswordNeverExpires,PasswordLastSet,whenCreated
-$DomainAdmins | Export-Csv -Path $exportPathDA -Delimiter ';' -NoTypeInformation -Encoding utf8
+# Создаем список строк для записи в файл
+$outputLinesDA = @()
+# Добавляем заголовок вручную только один раз
+$outputLinesDA += '"Name";"Enabled";"DisplayName";"PasswordNeverExpires";"PasswordLastSet";"whenCreated"'
+# Проходим по каждому пользователю и добавляем запись и пустую строку
+foreach ($user in $DomainAdmins) {
+    $line = $user | Select-Object Name, Enabled, DisplayName, PasswordNeverExpires, PasswordLastSet, whenCreated | ConvertTo-Csv -Delimiter ';' -NoTypeInformation | Select-Object -Skip 1
+    $outputLinesDA += $line
+    $outputLinesDA += "" # добавляем пустую строку
+}
+# Записываем строки в файл
+$outputLinesDA | Set-Content -Path $exportPathDA -Encoding utf8
+
 
 #список пользователей Schema Admins
-$exportPathDA=$mainPath+"SchemaAdmins.txt"
+$exportPathSA = $mainPath + "SchemaAdmins.txt"
+# Получаем пользователей группы Schema Admins
 $SchemaAdmins = Get-ADGroupMember -Identity "Schema Admins" | Get-ADUser -Properties Name,Enabled,DisplayName,PasswordNeverExpires,PasswordLastSet,whenCreated
-$SchemaAdmins | Export-Csv -Path $exportPathDA -Delimiter ';' -NoTypeInformation -Encoding utf8
+# Создаем список строк для записи в файл
+$outputLinesSA = @()
+# Добавляем заголовок вручную только один раз
+$outputLinesSA += '"Name";"Enabled";"DisplayName";"PasswordNeverExpires";"PasswordLastSet";"whenCreated"'
+# Проходим по каждому пользователю и добавляем запись и пустую строку
+foreach ($user in $SchemaAdmins) {
+    $line = $user | Select-Object Name, Enabled, DisplayName, PasswordNeverExpires, PasswordLastSet, whenCreated | ConvertTo-Csv -Delimiter ';' -NoTypeInformation | Select-Object -Skip 1
+    $outputLinesSA += $line
+    $outputLinesSA += "" # добавляем пустую строку
+}
+# Записываем строки в файл
+$outputLinesSA | Set-Content -Path $exportPathSA -Encoding utf8
+
 
 #список пользователей Enterprise Admins
-$exportPathDA=$mainPath+"EnterpriceAdmins.txt"
+$exportPathEA = $mainPath + "EnterpriseAdmins.txt"
+# Получаем пользователей группы Enterprise Admins
 $EnterpriseAdmins = Get-ADGroupMember -Identity "Enterprise Admins" | Get-ADUser -Properties Name,Enabled,DisplayName,PasswordNeverExpires,PasswordLastSet,whenCreated
-$EnterpriseAdmins | Export-Csv -Path $exportPathDA -Delimiter ';' -NoTypeInformation -Encoding utf8
+# Создаем список строк для записи в файл
+$outputLinesEA = @()
+# Добавляем заголовок вручную только один раз
+$outputLinesEA += '"Name";"Enabled";"DisplayName";"PasswordNeverExpires";"PasswordLastSet";"whenCreated"'
+# Проходим по каждому пользователю и добавляем запись и пустую строку
+foreach ($user in $EnterpriseAdmins) {
+    $line = $user | Select-Object Name, Enabled, DisplayName, PasswordNeverExpires, PasswordLastSet, whenCreated | ConvertTo-Csv -Delimiter ';' -NoTypeInformation | Select-Object -Skip 1
+    $outputLinesEA += $line
+    $outputLinesEA += "" # добавляем пустую строку
+}
+# Записываем строки в файл
+$outputLinesEA | Set-Content -Path $exportPathEA -Encoding utf8
+
 
 #Получить список контроллеров домена
 $exportPathDC=$mainPath+"DomainController.txt"
