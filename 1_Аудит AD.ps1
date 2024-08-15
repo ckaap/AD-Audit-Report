@@ -4,7 +4,6 @@
 Скрипт автоматически определяет путь сохранения данных и предоставляет удобочитаемые результаты, что облегчает анализ состояния инфраструктуры. 
 #>
 
-
 $Computers = (Get-ADComputer -Filter * | Measure-Object).Count
 $Workstation = (Get-ADComputer -Filter { OperatingSystem -notlike "*Server*"} | Measure-Object).Count
 $Servers = (Get-ADComputer -Filter { OperatingSystem -like "*Server*"} | Measure-Object).Count
@@ -101,25 +100,65 @@ Write-Host "Infrastructure Master = $InfrastructureMaster"
 "Infrastructure Master="+$InfrastructureMaster| Out-File -FilePath $mainCount -Append
 Write-Host "-----------------------------------------------------------------------"
 
-$exportPathPE =$mainPath+"PasswordNotExpires.txt" 
-#Проверяем пользователей у которых пароль не истекает
-$PasswordNotExpires = Get-ADuser -Filter {PasswordNeverExpires -eq $true -and Enabled -eq $true} -Properties Name,Enabled,DisplayName,PasswordNeverExpires,whenCreated
-$PasswordNotExpires | Export-Csv -Path $exportPathPE -Delimiter ';' -NoTypeInformation -Encoding utf8
 
-$exportPathP9l=$mainPath+"Password90Left.txt"
+$exportPathPE = $mainPath + "PasswordNotExpires.txt"
+# Получаем пользователей, у которых пароль не истекает
+$PasswordNotExpires = Get-ADuser -Filter {PasswordNeverExpires -eq $true -and Enabled -eq $true} -Properties Name,Enabled,DisplayName,PasswordNeverExpires,whenCreated
+# Создаем список строк для записи в файл
+$outputLines = @()
+# Добавляем заголовок вручную только один раз
+$outputLines += '"Name";"Enabled";"DisplayName";"PasswordNeverExpires";"whenCreated"'
+# Проходим по каждому пользователю и добавляем запись и пустую строку
+foreach ($user in $PasswordNotExpires) {
+    $line = $user | Select-Object Name, Enabled, DisplayName, PasswordNeverExpires, whenCreated | ConvertTo-Csv -Delimiter ';' -NoTypeInformation | Select-Object -Skip 1
+    $outputLines += $line
+    $outputLines += "" # добавляем пустую строку
+}
+# Записываем строки в файл
+$outputLines | Set-Content -Path $exportPathPE -Encoding utf8
+
+
 #Проверяем пользователей у которых пароль не менялся 90 дней
+$exportPathP9l = $mainPath + "Password90Left.txt"
+# Определяем дату порога в 90 дней назад
 $DateThrehold = (Get-Date).AddDays(-91)
+# Получаем пользователей, у которых пароль не менялся 90 дней
 $Password90Left = Get-AdUser -Filter {PasswordLastSet -lt $DateThrehold -and Enabled -eq $true} -Properties Name,Enabled,DisplayName,PasswordNeverExpires,PasswordLastSet,whenCreated
-$Password90Left | Export-Csv -Path $exportPathP9l -Delimiter ';' -NoTypeInformation -Encoding utf8
+# Создаем список строк для записи в файл
+$outputLinesP9l = @()
+# Добавляем заголовок вручную только один раз
+$outputLinesP9l += '"Name";"Enabled";"DisplayName";"PasswordNeverExpires";"PasswordLastSet";"whenCreated"'
+# Проходим по каждому пользователю и добавляем запись и пустую строку
+foreach ($user in $Password90Left) {
+    $line = $user | Select-Object Name, Enabled, DisplayName, PasswordNeverExpires, PasswordLastSet, whenCreated | ConvertTo-Csv -Delimiter ';' -NoTypeInformation | Select-Object -Skip 1
+    $outputLinesP9l += $line
+    $outputLinesP9l += "" # добавляем пустую строку
+}
+# Записываем строки в файл
+$outputLinesP9l | Set-Content -Path $exportPathP9l -Encoding utf8
+
 
 #Пользователи, которые не входили 90 дней
 $exportPathL9l=$mainPath+"Logon90Left.txt"
+# Определяем дату порога в 90 дней назад
 $DateThrehold = (Get-Date).AddDays(-91)
+# Получаем пользователей, которые не входили в систему 90 дней
 $Logon90Left = Get-AdUser -Filter {LastLogonDate -lt $DateThrehold -and Enabled -eq $true} -Properties Name,Enabled,DisplayName,PasswordNeverExpires,PasswordLastSet,whenCreated
-$Logon90Left | Export-Csv -Path $exportPathL9l -Delimiter ';' -NoTypeInformation -Encoding utf8
+# Создаем список строк для записи в файл
+$outputLinesL9l = @()
+# Добавляем заголовок вручную только один раз
+$outputLinesL9l += '"Name";"Enabled";"DisplayName";"PasswordNeverExpires";"PasswordLastSet";"whenCreated"'
+# Проходим по каждому пользователю и добавляем запись и пустую строку
+foreach ($user in $Logon90Left) {
+    $line = $user | Select-Object Name, Enabled, DisplayName, PasswordNeverExpires, PasswordLastSet, whenCreated | ConvertTo-Csv -Delimiter ';' -NoTypeInformation | Select-Object -Skip 1
+    $outputLinesL9l += $line
+    $outputLinesL9l += "" # добавляем пустую строку
+}
+# Записываем строки в файл
+$outputLinesL9l | Set-Content -Path $exportPathL9l -Encoding utf8
+
 
 #Получаем группы по типу
-
 $GroupSecurity = (Get-ADGroup -Filter {GroupCategory -eq "Security"} | Measure-Object).Count
 $GroupSecurityGlobal = (Get-ADGroup -Filter {GroupCategory -eq "Security" -and GroupScope -eq "Global"} | Measure-Object).Count
 $GroupSecurityDomainLocal = (Get-ADGroup -Filter {GroupCategory -eq "Security" -and GroupScope -eq "DomainLocal"} | Measure-Object).Count
